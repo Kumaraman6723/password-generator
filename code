@@ -1,0 +1,313 @@
+import java.io.*;
+import java.util.InputMismatchException;
+import java.util.Random;
+import java.util.Scanner;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
+public class Main {
+    private static String username;
+
+    public static void main(String[] args) throws InterruptedException, IOException {
+
+        Scanner sc = new Scanner(System.in);
+        createFile("passwords.txt");
+        createFile("passwords1.txt");
+        createFile("log.txt");
+
+
+        String inputString = "               Welcome to Password Generator!           ";
+        char[] words = inputString.toCharArray();
+        for (char word : words) {
+            System.out.print(word + " ");
+            Thread.sleep(200);
+        }
+        System.out.println("");
+        System.out.println("Enter username");
+        username= sc.nextLine();
+
+        String answer = null;
+        while (true) {
+            System.out.print("Have you forgotten your password? (Yes/No): ");
+            answer = sc.next();
+            if (answer.equalsIgnoreCase("Yes") || answer.equalsIgnoreCase("No")) {
+                break;
+            } else {
+                System.out.println("Invalid input. Please enter 'Yes' or 'No'.");
+            }
+        }
+
+        if (answer.equalsIgnoreCase("Yes")) {
+            // Search the log file for the most recent password selected by the user
+            BufferedReader reader = new BufferedReader(new FileReader("log.txt"));
+            String line;
+            String lastSelectedPassword = null;
+            while ((line = reader.readLine()) != null) {
+                    if (line.contains(username+" selected password: ")) {
+                    lastSelectedPassword = line.substring(line.indexOf(": ") + 2);
+                }
+            }
+            reader.close();
+
+            if (lastSelectedPassword != null) {
+                System.out.println("Your last selected password was: " + lastSelectedPassword);
+                help();
+            } else {
+                System.out.println("No password was found in the log file.");
+                help();
+            }
+        } else if (answer.equalsIgnoreCase("no")){
+            help();
+        }
+
+
+        sc.close();
+    }
+
+    private static void help() throws InterruptedException {
+        Scanner sc = new Scanner(System.in);
+        System.out.print("Do you want to create a new password ? (Yes/No): ");
+        String ans = sc.next();
+        while (!(ans.equalsIgnoreCase("Yes") || ans.equalsIgnoreCase("No"))) {
+            System.out.print("Invalid input. Do you want to create a new password then? (Yes/No): ");
+            ans = sc.next();
+        }
+        if (ans.equalsIgnoreCase("Yes")) {
+            String[] password = generatePassword(sc);
+            for (String s : password) {
+                // Step II: Checking Password Strength
+                int passwordStrengthScore = calculatePasswordStrength(s);
+
+                // Display and store the chosen password
+                displayAndStorePasswords(s, passwordStrengthScore);
+            }
+                choosePasswordFromFile(password, username);
+        } else if(ans.equalsIgnoreCase("No")){
+            System.out.println("Thank you for using our password generator system. Goodbye!");
+            System.exit(0);
+        }
+        sc.close();
+    }
+
+
+
+
+    private static String[] generatePassword(Scanner a) throws InterruptedException {
+
+
+        System.out.println("");
+        System.out.println("Answer the following questions to generate your password.");
+
+        // Step II: Interactive program that asks the user questions
+        boolean useUppercase = askYesNoQuestion(a, "Do you want to use uppercase letters?");
+        boolean useLowercase = askYesNoQuestion(a, "Do you want to use lowercase letters?");
+        boolean useNumbers = askYesNoQuestion(a, "Do you want to use numbers?");
+        boolean useSymbols = askYesNoQuestion(a, "Do you want to use symbols?");
+
+        Scanner a1 = new Scanner(System.in);
+        int passwordLength = 0;
+        while (true) {
+            System.out.print("Enter the desired length of the password: ");
+            try {
+                passwordLength = a1.nextInt();
+                break;
+            } catch (InputMismatchException e) {
+                System.out.println("Invalid input. Please enter an integer.");
+                a1.nextLine(); // consume the invalid input
+            }
+        }
+
+        // Step III: Generating passwords based on user preferences
+        String password1 = generatePassword(passwordLength, useUppercase, useLowercase, useNumbers, useSymbols);
+        String password2 = generatePassword(passwordLength, useUppercase, useLowercase, useNumbers, useSymbols);
+        String password3 = generatePassword(passwordLength, useUppercase, useLowercase, useNumbers, useSymbols);
+
+        System.out.println("Generated Passwords:");
+        System.out.println("1. " + password1);
+        System.out.println("2. " + password2);
+        System.out.println("3. " + password3);
+
+
+
+
+        return new String[]{ password1, password2, password3 };
+    }
+
+
+
+    private static boolean askYesNoQuestion(Scanner scanner, String question) {
+        System.out.print(question + " (Yes/No): ");
+        String answer = scanner.next().toLowerCase();
+        while (!answer.equals("yes") && !answer.equals("no")) {
+            System.out.print("Please enter a valid input (Yes/No): ");
+            answer = scanner.next().toLowerCase();
+        }
+        return answer.equals("yes");
+    }
+
+
+    private static String generatePassword(int length, boolean useUppercase, boolean useLowercase, boolean useNumbers, boolean useSymbols) {
+        StringBuilder password = new StringBuilder();
+        Random random = new Random();
+
+        // Generate at least one uppercase letter
+        if (useUppercase) {
+            password.append((char) (random.nextInt(26) + 'A'));
+        }
+
+        // Generate random characters based on user preferences
+        String allCharacters = "";
+        if (useUppercase) allCharacters += "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        if (useLowercase) allCharacters += "abcdefghijklmnopqrstuvwxyz";
+        if (useNumbers) allCharacters += "0123456789";
+        if (useSymbols) allCharacters += "!@#$%^&*()-=_+[]{}|;':,.<>/?";
+
+
+
+
+        for (int i = password.length(); i < length; i++) {
+            password.append(allCharacters.charAt(random.nextInt(allCharacters.length())));
+        }
+
+        return password.toString();
+    }
+
+    private static int calculatePasswordStrength(String password) {
+        int score = 0;
+
+        // Check password length
+        if (password.length() >= 8) score++;
+        if (password.length() >= 16) score++;
+
+        // Check if password starts with uppercase letter
+        if (Character.isUpperCase(password.charAt(0))) score++;
+
+        // Check if password ends with lowercase letter
+        if (Character.isLowerCase(password.charAt(password.length() - 1))) score++;
+
+        // Check if password has at least 3 numbers
+        int countNumbers = 0;
+        for (char c : password.toCharArray()) {
+            if (Character.isDigit(c)) countNumbers++;
+        }
+        if (countNumbers >= 3) score++;
+
+        // Check if password has at least 3 symbols
+        int countSymbols = 0;
+        String symbols = "!@#$%^&*()-=_+[]{}|;':,.<>/?";
+        for (char c : password.toCharArray()) {
+            if (symbols.indexOf(c) != -1) countSymbols++;
+        }
+        if (countSymbols >= 3) score++;
+
+        return score;
+    }
+
+    private static void displayAndStorePasswords(String password, int passwordStrengthScore) {
+        try {
+            // Display passwords
+            System.out.println("Generated Password: " + password);
+            System.out.println("Password Strength: " + getPasswordStrengthMessage(passwordStrengthScore));
+
+
+            FileWriter writer = new FileWriter("passwords.txt", true);
+            writer.write(password + "\n");
+            writer.close();
+
+
+        }
+        catch (IOException e) {
+            System.out.println("An error occurred while storing passwords.");
+        }
+    }
+
+
+    private static String getPasswordStrengthMessage(int score) {
+        if (score <= 2) {
+            return "Weak password";
+        } else if (score == 3) {
+            return "Medium password";
+        } else if (score == 4) {
+            return "Good password";
+        } else {
+            return "Great password";
+        }
+    }
+
+    private static String choosePasswordFromFile(String[] pass, String username) {
+
+        String chosenPassword = null;
+        try {
+            Scanner scanner = new Scanner(System.in);
+            File file = new File("passwords.txt");
+            Scanner fileScanner = new Scanner(file);
+
+            System.out.println("Choose a password from the file:");
+
+            int count = 1;
+            while (fileScanner.hasNextLine()) {
+                String password = fileScanner.nextLine();
+                System.out.println(count + ". " + password);
+                count++;
+            }
+
+            System.out.print("Enter the number of the password you want to choose: ");
+            int choice = scanner.nextInt();
+            fileScanner.close();
+
+            fileScanner = new Scanner(file);
+            count = 1;
+            while (fileScanner.hasNextLine()) {
+                if (count == choice) {
+                    chosenPassword = fileScanner.nextLine();
+                    System.out.println("Chosen Password: " + chosenPassword);
+
+                    // Write the chosen password to a new file
+                    File fileName = new File("passwords1.txt");
+
+                    try (PrintWriter writer = new PrintWriter(fileName)) {
+                        writer.println("Chosen Password: " + chosenPassword);
+
+                        System.out.println("Chosen password has been saved to " + fileName);
+                        System.out.println("Thank you for using our password generator system. Goodbye!");
+                    } catch (FileNotFoundException e) {
+                        System.out.println("Error writing to file: " + fileName);
+                        System.out.println(e);
+                    }
+
+                    FileWriter writer = new FileWriter("log.txt", true);
+                    try (PrintWriter writer1 = new PrintWriter(writer)) {
+
+                        writer1.println(username+" selected password: "+ chosenPassword);
+                    }
+                    break;
+
+                }
+                fileScanner.nextLine();
+                count++;
+            }
+
+            fileScanner.close();
+            File f = new File("passwords.txt");
+            PrintWriter writer = new PrintWriter(f);
+            writer.print("");
+            writer.close();
+        } catch (IOException e) {
+            System.out.println("An error occurred while reading the file.");
+            System.out.println(e);
+        }
+        return chosenPassword;
+    }
+    private static void createFile(String filename) {
+        try {
+            File file = new File(filename);
+            file.createNewFile();
+        } catch (IOException e) {
+            System.out.println("An error occurred while creating the file: " + filename);
+            e.printStackTrace();
+        }
+    }
+
+
+}
